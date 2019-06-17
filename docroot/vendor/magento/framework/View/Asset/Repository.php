@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © 2016 Magento. All rights reserved.
+ * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
 
@@ -16,6 +16,7 @@ use Magento\Framework\View\Design\Theme\ThemeProviderInterface;
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  *
  * @api
+ * @since 100.0.2
  */
 class Repository
 {
@@ -36,7 +37,7 @@ class Repository
 
     /**
      * @var \Magento\Framework\View\Design\Theme\ListInterface
-     * @deprecated
+     * @deprecated 100.0.2
      */
     private $themeList;
 
@@ -126,6 +127,7 @@ class Repository
      * @return $this
      *
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
      */
     public function updateDesignParams(array &$params)
     {
@@ -146,7 +148,12 @@ class Repository
         }
 
         if ($theme) {
-            $params['themeModel'] = $this->getThemeProvider()->getThemeByFullPath($area . '/' . $theme);
+            if (is_numeric($theme)) {
+                $params['themeModel'] = $this->getThemeProvider()->getThemeById($theme);
+            } else {
+                $params['themeModel'] = $this->getThemeProvider()->getThemeByFullPath($area . '/' . $theme);
+            }
+
             if (!$params['themeModel']) {
                 throw new \UnexpectedValueException("Could not find theme '$theme' for area '$area'");
             }
@@ -167,8 +174,9 @@ class Repository
     }
 
     /**
+     * Get theme provider
+     *
      * @return ThemeProviderInterface
-     * @deprecated
      */
     private function getThemeProvider()
     {
@@ -205,6 +213,14 @@ class Repository
         if (!$module && $params['module']) {
             $module = $params['module'];
         }
+
+        if (!isset($params['publish'])) {
+            $map = $this->getRepositoryFilesMap($fileId, $params);
+            if ($map) {
+                $params = array_replace($params, $map);
+            }
+        }
+
         $isSecure = isset($params['_secure']) ? (bool) $params['_secure'] : null;
         $themePath = isset($params['theme']) ? $params['theme'] : $this->design->getThemePath($params['themeModel']);
         $context = $this->getFallbackContext(
@@ -228,7 +244,7 @@ class Repository
     /**
      * Get current context for static view files
      *
-     * @return \Magento\Framework\View\Asset\ContextInterface
+     * @return \Magento\Framework\View\Asset\File\FallbackContext
      */
     public function getStaticViewFileContext()
     {
@@ -269,8 +285,7 @@ class Repository
                     'baseUrl' => $url,
                     'areaType' => $area,
                     'themePath' => $themePath,
-                    'localeCode' => $locale,
-                    'isSecure' => $isSecure
+                    'localeCode' => $locale
                 ]
             );
         }
@@ -431,5 +446,18 @@ class Repository
             );
         }
         return [$result[0], $result[1]];
+    }
+
+    /**
+     * Get repository files map
+     *
+     * @param string $fileId
+     * @param array $params
+     * @return RepositoryMap
+     */
+    private function getRepositoryFilesMap($fileId, array $params)
+    {
+        $repositoryMap = ObjectManager::getInstance()->get(RepositoryMap::class);
+        return $repositoryMap->getMap($fileId, $params);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © 2016 Magento. All rights reserved.
+ * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
 namespace Magento\Wishlist\Helper;
@@ -13,6 +13,9 @@ use Magento\Wishlist\Controller\WishlistProviderInterface;
  *
  * @author     Magento Core Team <core@magentocommerce.com>
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ *
+ * @api
+ * @since 100.0.2
  */
 class Data extends \Magento\Framework\App\Helper\AbstractHelper
 {
@@ -192,6 +195,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
 
     /**
      * Retrieve wishlist item count (include config settings)
+     *
      * Used in top link menu only
      *
      * @return int
@@ -281,9 +285,12 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     {
         $url = $this->_getUrl('wishlist/index/remove');
         $params = ['item' => $item->getWishlistItemId()];
+        $params[ActionInterface::PARAM_NAME_URL_ENCODED] = '';
+
         if ($addReferer) {
             $params = $this->addRefererToParams($params);
         }
+
         return $this->_postDataHelper->getPostData($url, $params);
     }
 
@@ -392,9 +399,12 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     public function getAddToCartParams($item, $addReferer = false)
     {
         $params = $this->_getCartUrlParameters($item);
+        $params[ActionInterface::PARAM_NAME_URL_ENCODED] = '';
+
         if ($addReferer) {
             $params = $this->addRefererToParams($params);
         }
+
         return $this->_postDataHelper->getPostData(
             $this->_getUrlStore($item)->getUrl('wishlist/index/cart'),
             $params
@@ -441,6 +451,8 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     }
 
     /**
+     * Get cart URL parameters
+     *
      * @param string|\Magento\Catalog\Model\Product|\Magento\Wishlist\Model\Item $item
      * @return array
      */
@@ -500,7 +512,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     /**
      * Retrieve customer name
      *
-     * @return string|void
+     * @return string|null
      */
     public function getCustomerName()
     {
@@ -567,7 +579,7 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
             ) {
                 $count = $collection->getItemsQty();
             } else {
-                $count = $collection->getSize();
+                $count = $collection->count();
             }
             $this->_customerSession->setWishlistDisplayType(
                 $this->scopeConfig->getValue(

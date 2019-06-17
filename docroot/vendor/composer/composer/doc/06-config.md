@@ -65,7 +65,17 @@ an OAuth token for GitHub.
 
 A list of domain names and oauth keys. For example using `{"gitlab.com":
 "oauthtoken"}` as the value of this option will use `oauthtoken` to access
-private repositories on gitlab.
+private repositories on gitlab. Please note: If the package is not hosted at 
+gitlab.com the domain names must be also specified with the 
+[`gitlab-domains`](06-config.md#gitlab-domains) option.
+
+## gitlab-token
+
+A list of domain names and private tokens. For example using `{"gitlab.com":
+"privatetoken"}` as the value of this option will use `privatetoken` to access
+private repositories on gitlab. Please note: If the package is not hosted at 
+gitlab.com the domain names must be also specified with the 
+[`gitlab-domains`](06-config.md#gitlab-domains) option.
 
 ## disable-tls
 
@@ -80,6 +90,12 @@ Defaults to `true`. If set to true only HTTPS URLs are allowed to be
 downloaded via Composer. If you really absolutely need HTTP access to something
 then you can disable it, but using [Let's Encrypt](https://letsencrypt.org/) to
 get a free SSL certificate is generally a better alternative.
+
+## bitbucket-oauth
+
+A list of domain names and consumers. For example using `{"bitbucket.org":
+{"consumer-key": "myKey", "consumer-secret": "mySecret"}}`. [Read](https://confluence.atlassian.com/bitbucket/oauth-on-bitbucket-cloud-238027431.html)
+how to set up a consumer on Bitbucket.
 
 ## cafile
 
@@ -96,7 +112,7 @@ capath must be a correctly hashed certificate directory.
 ## http-basic
 
 A list of domain names and username/passwords to authenticate against them. For
-example using `{"example.org": {"username": "alice", "password": "foo"}` as the
+example using `{"example.org": {"username": "alice", "password": "foo"}}` as the
 value of this option will let Composer authenticate against example.org.
 
 > **Note:** Authentication-related config options like `http-basic` and
@@ -108,7 +124,7 @@ value of this option will let Composer authenticate against example.org.
 
 Lets you fake platform packages (PHP and extensions) so that you can emulate a
 production env or define your target platform in the config. Example: `{"php":
-"5.4", "ext-something": "4.0"}`.
+"7.0.3", "ext-something": "4.0.3"}`.
 
 ## vendor-dir
 
@@ -143,7 +159,7 @@ Defaults to `$cache-dir/files`. Stores the zip archives of packages.
 ## cache-repo-dir
 
 Defaults to `$cache-dir/repo`. Stores repository metadata for the `composer`
-type and the VCS repos of type `svn`, `github` and `bitbucket`.
+type and the VCS repos of type `svn`, `fossil`, `github` and `bitbucket`.
 
 ## cache-vcs-dir
 
@@ -198,6 +214,11 @@ by name in `composer.json` when adding a new package.
 Defaults to `false`. If `true`, the Composer autoloader will only load classes
 from the classmap. Implies `optimize-autoloader`.
 
+## apcu-autoloader
+
+Defaults to `false`. If `true`, the Composer autoloader will check for APCu and
+use it to cache found/not-found classes when the extension is enabled.
+
 ## github-domains
 
 Defaults to `["github.com"]`. A list of domains to use in github mode. This is
@@ -247,5 +268,10 @@ Example:
     }
 }
 ```
+
+## htaccess-protect
+
+Defaults to `true`. If set to `false`, Composer will not create `.htaccess` files
+in the composer home, cache, and data directories.
 
 &larr; [Repositories](05-repositories.md)  |  [Community](07-community.md) &rarr;

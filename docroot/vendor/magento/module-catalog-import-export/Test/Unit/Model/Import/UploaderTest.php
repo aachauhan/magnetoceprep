@@ -1,12 +1,12 @@
 <?php
 
 /**
- * Copyright © 2016 Magento. All rights reserved.
+ * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
 namespace Magento\CatalogImportExport\Test\Unit\Model\Import;
 
-class UploaderTest extends \PHPUnit_Framework_TestCase
+class UploaderTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var \Magento\MediaStorage\Helper\File\Storage\Database|\PHPUnit_Framework_MockObject_MockObject
@@ -93,17 +93,17 @@ class UploaderTest extends \PHPUnit_Framework_TestCase
                 $this->filesystem,
                 $this->readFactory,
             ])
-            ->setMethods(['_setUploadFile', 'save', 'getTmpDir'])
+            ->setMethods(['_setUploadFile', 'save', 'getTmpDir', 'checkAllowedExtension'])
             ->getMock();
     }
 
     /**
      * @dataProvider moveFileUrlDataProvider
      */
-    public function testMoveFileUrl($fileUrl, $expectedHost, $expectedFileName)
+    public function testMoveFileUrl($fileUrl, $expectedHost, $expectedFileName, $checkAllowedExtension)
     {
         $destDir = 'var/dest/dir';
-        $expectedRelativeFilePath = $this->uploader->getTmpDir() . '/' . $expectedFileName;
+        $expectedRelativeFilePath = $expectedFileName;
         $this->directoryMock->expects($this->once())->method('isWritable')->with($destDir)->willReturn(true);
         $this->directoryMock->expects($this->any())->method('getRelativePath')->with($expectedRelativeFilePath);
         $this->directoryMock->expects($this->once())->method('getAbsolutePath')->with($destDir)
@@ -127,17 +127,22 @@ class UploaderTest extends \PHPUnit_Framework_TestCase
         $this->uploader->expects($this->any())->method('getTmpDir')->will($this->returnValue(''));
         $this->uploader->expects($this->once())->method('_setUploadFile')->will($this->returnSelf());
         $this->uploader->expects($this->once())->method('save')->with($destDir . '/' . $expectedFileName)
-            ->willReturn(['name' => $expectedFileName]);
+            ->willReturn(['name' => $expectedFileName, 'path' => 'absPath']);
+        $this->uploader->expects($this->exactly($checkAllowedExtension))
+            ->method('checkAllowedExtension')
+            ->willReturn(true);
 
         $this->uploader->setDestDir($destDir);
-        $this->assertEquals(['name' => $expectedFileName], $this->uploader->move($fileUrl));
+        $result = $this->uploader->move($fileUrl);
+        $this->assertEquals(['name' => $expectedFileName], $result);
+        $this->assertArrayNotHasKey('path', $result);
     }
 
     public function testMoveFileName()
     {
         $destDir = 'var/dest/dir';
         $fileName = 'test_uploader_file';
-        $expectedRelativeFilePath = $this->uploader->getTmpDir() . '/' . $fileName;
+        $expectedRelativeFilePath = $fileName;
         $this->directoryMock->expects($this->once())->method('isWritable')->with($destDir)->willReturn(true);
         $this->directoryMock->expects($this->any())->method('getRelativePath')->with($expectedRelativeFilePath);
         $this->directoryMock->expects($this->once())->method('getAbsolutePath')->with($destDir)
@@ -152,18 +157,107 @@ class UploaderTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(['name' => $fileName], $this->uploader->move($fileName));
     }
 
+    /**
+     * @dataProvider moveFileUrlDriverPoolDataProvider
+     */
+    public function testMoveFileUrlDrivePool($fileUrl, $expectedHost, $expectedDriverPool, $expectedScheme)
+    {
+        $driverPool = $this->createPartialMock(\Magento\Framework\Filesystem\DriverPool::class, ['getDriver']);
+        $driverMock = $this->createPartialMock($expectedDriverPool, ['readAll', 'isExists']);
+        $driverMock->expects($this->any())->method('isExists')->willReturn(true);
+        $driverMock->expects($this->any())->method('readAll')->willReturn(null);
+        $driverPool->expects($this->any())->method('getDriver')->willReturn($driverMock);
+
+        $readFactory = $this->getMockBuilder(\Magento\Framework\Filesystem\File\ReadFactory::class)
+            ->setConstructorArgs(
+                [
+                    $driverPool,
+                ]
+            )
+            ->setMethods(['create'])
+            ->getMock();
+
+        $readFactory->expects($this->any())->method('create')
+            ->with($expectedHost, $expectedScheme)
+            ->willReturn($driverMock);
+
+        $uploaderMock = $this->getMockBuilder(\Magento\CatalogImportExport\Model\Import\Uploader::class)
+            ->setConstructorArgs([
+                $this->coreFileStorageDb,
+                $this->coreFileStorage,
+                $this->imageFactory,
+                $this->validator,
+                $this->filesystem,
+                $readFactory,
+            ])
+            ->getMock();
+
+        $result = $uploaderMock->move($fileUrl);
+        $this->assertNull($result);
+    }
+
+    /**
+     * @return array
+     */
+    public function moveFileUrlDriverPoolDataProvider()
+    {
+        return [
+            [
+                '$fileUrl'              => 'http://test_uploader_file',
+                '$expectedHost'         => 'test_uploader_file',
+                '$expectedDriverPool'   => \Magento\Framework\Filesystem\Driver\Http::class,
+                '$expectedScheme'       => \Magento\Framework\Filesystem\DriverPool::HTTP,
+            ],
+            [
+                '$fileUrl'              => 'https://!:^&`;file',
+                '$expectedHost'         => '!:^&`;file',
+                '$expectedDriverPool'   => \Magento\Framework\Filesystem\Driver\Https::class,
+                '$expectedScheme'       => \Magento\Framework\Filesystem\DriverPool::HTTPS,
+            ],
+        ];
+    }
+
+    /**
+     * @return array
+     */
     public function moveFileUrlDataProvider()
     {
         return [
             [
                 '$fileUrl' => 'http://test_uploader_file',
                 '$expectedHost' => 'test_uploader_file',
-                '$expectedFileName' => 'httptest_uploader_file',
+                '$expectedFileName' => 'test_uploader_file',
+                '$checkAllowedExtension' => 0
             ],
             [
                 '$fileUrl' => 'https://!:^&`;file',
                 '$expectedHost' => '!:^&`;file',
-                '$expectedFileName' => 'httpsfile',
+                '$expectedFileName' => 'file',
+                '$checkAllowedExtension' => 0
+            ],
+            [
+                '$fileUrl' => 'https://www.google.com/image.jpg',
+                '$expectedHost' => 'www.google.com/image.jpg',
+                '$expectedFileName' => 'image.jpg',
+                '$checkAllowedExtension' => 1
+            ],
+            [
+                '$fileUrl' => 'https://www.google.com/image.jpg?param=1',
+                '$expectedHost' => 'www.google.com/image.jpg?param=1',
+                '$expectedFileName' => 'image.jpg',
+                '$checkAllowedExtension' => 1
+            ],
+            [
+                '$fileUrl' => 'https://www.google.com/image.jpg?param=1&param=2',
+                '$expectedHost' => 'www.google.com/image.jpg?param=1&param=2',
+                '$expectedFileName' => 'image.jpg',
+                '$checkAllowedExtension' => 1
+            ],
+            [
+                '$fileUrl' => 'http://www.google.com/image.jpg?param=1&param=2',
+                '$expectedHost' => 'www.google.com/image.jpg?param=1&param=2',
+                '$expectedFileName' => 'image.jpg',
+                '$checkAllowedExtension' => 1
             ],
         ];
     }

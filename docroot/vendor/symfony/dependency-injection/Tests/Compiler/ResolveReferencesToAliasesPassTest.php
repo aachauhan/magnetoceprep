@@ -11,13 +11,14 @@
 
 namespace Symfony\Component\DependencyInjection\Tests\Compiler;
 
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\Alias;
-use Symfony\Component\DependencyInjection\Definition;
-use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\Compiler\ResolveReferencesToAliasesPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\DependencyInjection\Reference;
 
-class ResolveReferencesToAliasesPassTest extends \PHPUnit_Framework_TestCase
+class ResolveReferencesToAliasesPassTest extends TestCase
 {
     public function testProcess()
     {
@@ -25,7 +26,7 @@ class ResolveReferencesToAliasesPassTest extends \PHPUnit_Framework_TestCase
         $container->setAlias('bar', 'foo');
         $def = $container
             ->register('moo')
-            ->setArguments(array(new Reference('bar')))
+            ->setArguments([new Reference('bar')])
         ;
 
         $this->process($container);
@@ -41,7 +42,7 @@ class ResolveReferencesToAliasesPassTest extends \PHPUnit_Framework_TestCase
         $container->setAlias('moo', 'bar');
         $def = $container
             ->register('foobar')
-            ->setArguments(array(new Reference('moo')))
+            ->setArguments([new Reference('moo')])
         ;
 
         $this->process($container);
@@ -67,10 +68,10 @@ class ResolveReferencesToAliasesPassTest extends \PHPUnit_Framework_TestCase
         $container->register('factory', 'Factory');
         $container->setAlias('factory_alias', new Alias('factory'));
         $foo = new Definition();
-        $foo->setFactory(array(new Reference('factory_alias'), 'createFoo'));
+        $foo->setFactory([new Reference('factory_alias'), 'createFoo']);
         $container->setDefinition('foo', $foo);
         $bar = new Definition();
-        $bar->setFactory(array('Factory', 'createFoo'));
+        $bar->setFactory(['Factory', 'createFoo']);
         $container->setDefinition('bar', $bar);
 
         $this->process($container);
@@ -84,20 +85,44 @@ class ResolveReferencesToAliasesPassTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @group legacy
+     * @expectedDeprecation The "deprecated_foo_alias" service alias is deprecated. You should stop using it, as it will be removed in the future. It is being referenced by the "alias" alias.
      */
-    public function testResolveFactoryService()
+    public function testDeprecationNoticeWhenReferencedByAlias()
     {
         $container = new ContainerBuilder();
-        $container->register('factory', 'Factory');
-        $container->setAlias('factory_alias', new Alias('factory'));
-        $foo = new Definition();
-        $foo->setFactoryService('factory_alias');
-        $foo->setFactoryMethod('createFoo');
-        $container->setDefinition('foo', $foo);
+
+        $container->register('foo', 'stdClass');
+
+        $aliasDeprecated = new Alias('foo');
+        $aliasDeprecated->setDeprecated(true);
+        $container->setAlias('deprecated_foo_alias', $aliasDeprecated);
+
+        $alias = new Alias('deprecated_foo_alias');
+        $container->setAlias('alias', $alias);
 
         $this->process($container);
+    }
 
-        $this->assertSame('factory', $foo->getFactoryService());
+    /**
+     * @group legacy
+     * @expectedDeprecation The "foo_aliased" service alias is deprecated. You should stop using it, as it will be removed in the future. It is being referenced by the "definition" service.
+     */
+    public function testDeprecationNoticeWhenReferencedByDefinition()
+    {
+        $container = new ContainerBuilder();
+
+        $container->register('foo', 'stdClass');
+
+        $aliasDeprecated = new Alias('foo');
+        $aliasDeprecated->setDeprecated(true);
+        $container->setAlias('foo_aliased', $aliasDeprecated);
+
+        $container
+            ->register('definition')
+            ->setArguments([new Reference('foo_aliased')])
+        ;
+
+        $this->process($container);
     }
 
     protected function process(ContainerBuilder $container)

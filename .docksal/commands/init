@@ -15,6 +15,18 @@ set -e
 DOCROOT_PATH="${PROJECT_ROOT}/${DOCROOT}"
 BIN_PATH="${DOCROOT_PATH}/bin"
 
+AUTH_JSON=$(cat <<EOF
+{
+    \"http-basic\": {
+        \"${MAGENTO_REPO_URL}\": {
+            \"username\": \"${MAGENTO_REPO_USERNAME}\",
+            \"password\": \"${MAGENTO_REPO_PASSWORD}\"
+        }
+    }
+}
+EOF
+);
+
 #-------------------------- END: Settings --------------------------------
 
 #-------------------------- Helper functions --------------------------------
@@ -35,9 +47,19 @@ echo-yellow () { echo -e "${yellow}$1${NC}"; }
 
 #-------------------------- Functions --------------------------------
 
+
 # Install site
 site_install ()
 {
+    fin exec "cat > ~/.composer/auth.json <<< \"${AUTH_JSON}\"";
+
+    fin exec "sudo composer self-update"
+
+    cd $DOCROOT_PATH
+    fin exec "composer clear-cache && composer update"
+
+    #fin exec "composer clear-cache && composer create-project --repository=${MAGENTO_REPO_URL}/ magento/project-community-edition"
+
     cd $BIN_PATH
     fin exec "php ./magento setup:install \
     --base-url=http://${VIRTUAL_HOST} \
@@ -60,8 +82,13 @@ site_install ()
 fix_permissions ()
 {
     cd $DOCROOT_PATH
+
+    find var generated vendor pub/static pub/media app/etc -type f -exec chmod g+w {} +
+    find var generated vendor pub/static pub/media app/etc -type d -exec chmod g+ws {} +
+
     chmod 777 ./app/etc
     chmod -R 644 ./app/etc/*
+    chmod u+x bin/magento
 }
 
 if [[ "$PROJECT_ROOT" == "" ]]; then
@@ -78,7 +105,7 @@ else
 fi
 
 echo "Waiting 10s for MySQL to initialize...";
-sleep 10
+#sleep 10
 
 echo -e "${green_bg} Step 2 ${NC}${green} Installing site...${NC}"
 time site_install

@@ -27,6 +27,7 @@ class ArtifactRepository extends ArrayRepository implements ConfigurableReposito
 
     protected $lookup;
     protected $repoConfig;
+    private $io;
 
     public function __construct(array $repoConfig, IOInterface $io)
     {
@@ -83,7 +84,7 @@ class ArtifactRepository extends ArrayRepository implements ConfigurableReposito
      * Find a file by name, returning the one that has the shortest path.
      *
      * @param \ZipArchive $zip
-     * @param $filename
+     * @param string $filename
      * @return bool|int
      */
     private function locateFile(\ZipArchive $zip, $filename)
@@ -108,7 +109,7 @@ class ArtifactRepository extends ArrayRepository implements ConfigurableReposito
                 }
 
                 $length = strlen($stat['name']);
-                if ($indexOfShortestMatch == false || $length < $lengthOfShortestMatch) {
+                if ($indexOfShortestMatch === false || $length < $lengthOfShortestMatch) {
                     //Check it's not a directory.
                     $contents = $zip->getFromIndex($i);
                     if ($contents !== false) {
@@ -125,18 +126,25 @@ class ArtifactRepository extends ArrayRepository implements ConfigurableReposito
     private function getComposerInformation(\SplFileInfo $file)
     {
         $zip = new \ZipArchive();
-        $zip->open($file->getPathname());
+        if ($zip->open($file->getPathname()) !== true) {
+            return false;
+        }
 
         if (0 == $zip->numFiles) {
+            $zip->close();
+
             return false;
         }
 
         $foundFileIndex = $this->locateFile($zip, 'composer.json');
         if (false === $foundFileIndex) {
+            $zip->close();
+
             return false;
         }
 
         $configurationFileName = $zip->getNameIndex($foundFileIndex);
+        $zip->close();
 
         $composerFile = "zip://{$file->getPathname()}#$configurationFileName";
         $json = file_get_contents($composerFile);
@@ -148,7 +156,11 @@ class ArtifactRepository extends ArrayRepository implements ConfigurableReposito
             'shasum' => sha1_file($file->getRealPath()),
         );
 
-        $package = $this->loader->load($package);
+        try {
+            $package = $this->loader->load($package);
+        } catch (\UnexpectedValueException $e) {
+            throw new \UnexpectedValueException('Failed loading package in '.$file.': '.$e->getMessage(), 0, $e);
+        }
 
         return $package;
     }

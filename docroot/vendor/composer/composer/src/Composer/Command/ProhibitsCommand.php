@@ -30,12 +30,14 @@ class ProhibitsCommand extends BaseDependencyCommand
         $this
             ->setName('prohibits')
             ->setAliases(array('why-not'))
-            ->setDescription('Shows which packages prevent the given package from being installed')
-            ->setHelp(<<<EOT
+            ->setDescription('Shows which packages prevent the given package from being installed.')
+            ->setHelp(
+                <<<EOT
 Displays detailed information about why a package cannot be installed.
 
 <info>php composer.phar prohibits composer/composer</info>
 
+Read more at https://getcomposer.org/doc/03-cli.md#prohibits-why-not-
 EOT
             )
         ;

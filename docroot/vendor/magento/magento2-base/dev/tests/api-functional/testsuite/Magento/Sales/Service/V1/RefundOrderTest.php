@@ -1,9 +1,11 @@
 <?php
 /**
- * Copyright © 2016 Magento. All rights reserved.
+ * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
 namespace Magento\Sales\Service\V1;
+
+use Magento\Sales\Model\Order;
 
 /**
  * API test for creation of Creditmemo for certain Order.
@@ -86,10 +88,10 @@ class RefundOrderTest extends \Magento\TestFramework\TestCase\WebapiAbstract
                 'Failed asserting that proper shipping amount of the Order was refunded'
             );
 
-            $this->assertNotEquals(
-                $existingOrder->getStatus(),
+            $this->assertEquals(
+                Order::STATE_COMPLETE,
                 $updatedOrder->getStatus(),
-                'Failed asserting that order status was changed'
+                'Failed asserting that order status has not changed'
             );
         } catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
             $this->fail('Failed asserting that Creditmemo was created');

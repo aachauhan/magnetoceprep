@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright © 2016 Magento. All rights reserved.
+ * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
 
@@ -13,6 +13,10 @@ namespace Magento\Catalog\Block\Product\View\Options;
 
 use Magento\Catalog\Pricing\Price\CustomOptionPriceInterface;
 
+/**
+ * @api
+ * @since 100.0.2
+ */
 abstract class AbstractOptions extends \Magento\Framework\View\Element\Template
 {
     /**
@@ -101,9 +105,12 @@ abstract class AbstractOptions extends \Magento\Framework\View\Element\Template
     }
 
     /**
+     * Retrieve formatted price
+     *
      * @return string
+     * @since 102.0.6
      */
-    public function getFormatedPrice()
+    public function getFormattedPrice()
     {
         if ($option = $this->getOption()) {
             return $this->_formatPrice(
@@ -114,6 +121,17 @@ abstract class AbstractOptions extends \Magento\Framework\View\Element\Template
             );
         }
         return '';
+    }
+
+    /**
+     * @return string
+     *
+     * @deprecated 102.0.6
+     * @see getFormattedPrice()
+     */
+    public function getFormatedPrice()
+    {
+        return $this->getFormattedPrice();
     }
 
     /**
@@ -174,7 +192,7 @@ abstract class AbstractOptions extends \Magento\Framework\View\Element\Template
      * Returns price converted to current currency rate
      *
      * @param float $price
-     * @return float
+     * @return float|string
      */
     public function getCurrencyPrice($price)
     {
