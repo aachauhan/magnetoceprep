@@ -306,6 +306,14 @@ class Proxy extends \Magento\Catalog\Model\ResourceModel\Category implements \Ma
     /**
      * {@inheritdoc}
      */
+    public function getCategoryWithChildren(int $categoryId) : array
+    {
+        return $this->_getSubject()->getCategoryWithChildren($categoryId);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function getDefaultStoreId()
     {
         return $this->_getSubject()->getDefaultStoreId();

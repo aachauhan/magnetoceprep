@@ -8,10 +8,10 @@ class Interceptor extends \Magento\Catalog\Model\Category\Attribute\Backend\Imag
 {
     use \Magento\Framework\Interception\Interceptor;
 
-    public function __construct(\Psr\Log\LoggerInterface $logger, \Magento\Framework\Filesystem $filesystem, \Magento\MediaStorage\Model\File\UploaderFactory $fileUploaderFactory)
+    public function __construct(\Psr\Log\LoggerInterface $logger, \Magento\Framework\Filesystem $filesystem, \Magento\MediaStorage\Model\File\UploaderFactory $fileUploaderFactory, ?\Magento\Store\Model\StoreManagerInterface $storeManager = null, ?\Magento\Catalog\Model\ImageUploader $imageUploader = null)
     {
         $this->___init();
-        parent::__construct($logger, $filesystem, $fileUploaderFactory);
+        parent::__construct($logger, $filesystem, $fileUploaderFactory, $storeManager, $imageUploader);
     }
 
     /**

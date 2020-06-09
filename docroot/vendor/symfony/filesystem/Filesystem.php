@@ -53,7 +53,7 @@ class Filesystem
         }
 
         if ($doCopy) {
-            // https://bugs.php.net/bug.php?id=64634
+            // https://bugs.php.net/64634
             if (false === $source = @fopen($originFile, 'r')) {
                 throw new IOException(sprintf('Failed to copy "%s" to "%s" because source file could not be opened for reading.', $originFile, $targetFile), 0, null, $originFile);
             }
@@ -102,9 +102,9 @@ class Filesystem
                 if (!is_dir($dir)) {
                     // The directory was not created by a concurrent process. Let's throw an exception with a developer friendly error message if we have one
                     if (self::$lastError) {
-                        throw new IOException(sprintf('Failed to create "%s": %s.', $dir, self::$lastError), 0, null, $dir);
+                        throw new IOException(sprintf('Failed to create "%s": ', $dir).self::$lastError, 0, null, $dir);
                     }
-                    throw new IOException(sprintf('Failed to create "%s"', $dir), 0, null, $dir);
+                    throw new IOException(sprintf('Failed to create "%s".', $dir), 0, null, $dir);
                 }
             }
         }
@@ -172,16 +172,16 @@ class Filesystem
             if (is_link($file)) {
                 // See https://bugs.php.net/52176
                 if (!(self::box('unlink', $file) || '\\' !== \DIRECTORY_SEPARATOR || self::box('rmdir', $file)) && file_exists($file)) {
-                    throw new IOException(sprintf('Failed to remove symlink "%s": %s.', $file, self::$lastError));
+                    throw new IOException(sprintf('Failed to remove symlink "%s": ', $file).self::$lastError);
                 }
             } elseif (is_dir($file)) {
                 $this->remove(new \FilesystemIterator($file, \FilesystemIterator::CURRENT_AS_PATHNAME | \FilesystemIterator::SKIP_DOTS));
 
                 if (!self::box('rmdir', $file) && file_exists($file)) {
-                    throw new IOException(sprintf('Failed to remove directory "%s": %s.', $file, self::$lastError));
+                    throw new IOException(sprintf('Failed to remove directory "%s": ', $file).self::$lastError);
                 }
             } elseif (!self::box('unlink', $file) && file_exists($file)) {
-                throw new IOException(sprintf('Failed to remove file "%s": %s.', $file, self::$lastError));
+                throw new IOException(sprintf('Failed to remove file "%s": ', $file).self::$lastError);
             }
         }
     }
@@ -212,7 +212,7 @@ class Filesystem
      * Change the owner of an array of files or directories.
      *
      * @param string|iterable $files     A filename, an array of files, or a \Traversable instance to change owner
-     * @param string          $user      The new owner user name
+     * @param string|int      $user      A user name or number
      * @param bool            $recursive Whether change the owner recursively or not
      *
      * @throws IOException When the change fails
@@ -239,7 +239,7 @@ class Filesystem
      * Change the group of an array of files or directories.
      *
      * @param string|iterable $files     A filename, an array of files, or a \Traversable instance to change group
-     * @param string          $group     The group name
+     * @param string|int      $group     A group name or number
      * @param bool            $recursive Whether change the group recursively or not
      *
      * @throws IOException When the change fails
@@ -281,7 +281,7 @@ class Filesystem
 
         if (true !== @rename($origin, $target)) {
             if (is_dir($origin)) {
-                // See https://bugs.php.net/bug.php?id=54097 & http://php.net/manual/en/function.rename.php#113943
+                // See https://bugs.php.net/54097 & https://php.net/rename#113943
                 $this->mirror($origin, $target, null, ['override' => $overwrite, 'delete' => $overwrite]);
                 $this->remove($origin);
 
@@ -294,13 +294,9 @@ class Filesystem
     /**
      * Tells whether a file exists and is readable.
      *
-     * @param string $filename Path to the file
-     *
-     * @return bool
-     *
      * @throws IOException When windows path is longer than 258 characters
      */
-    private function isReadable($filename)
+    private function isReadable(string $filename): bool
     {
         $maxPathLength = PHP_MAXPATHLEN - 2;
 
@@ -363,7 +359,7 @@ class Filesystem
         }
 
         if (!is_file($originFile)) {
-            throw new FileNotFoundException(sprintf('Origin file "%s" is not a file', $originFile));
+            throw new FileNotFoundException(sprintf('Origin file "%s" is not a file.', $originFile));
         }
 
         foreach ($this->toIterable($targetFiles) as $targetFile) {
@@ -381,18 +377,16 @@ class Filesystem
     }
 
     /**
-     * @param string $origin
-     * @param string $target
      * @param string $linkType Name of the link type, typically 'symbolic' or 'hard'
      */
-    private function linkException($origin, $target, $linkType)
+    private function linkException(string $origin, string $target, string $linkType)
     {
         if (self::$lastError) {
             if ('\\' === \DIRECTORY_SEPARATOR && false !== strpos(self::$lastError, 'error code(1314)')) {
-                throw new IOException(sprintf('Unable to create %s link due to error code 1314: \'A required privilege is not held by the client\'. Do you have the required Administrator-rights?', $linkType), 0, null, $target);
+                throw new IOException(sprintf('Unable to create "%s" link due to error code 1314: \'A required privilege is not held by the client\'. Do you have the required Administrator-rights?', $linkType), 0, null, $target);
             }
         }
-        throw new IOException(sprintf('Failed to create %s link from "%s" to "%s".', $linkType, $origin, $target), 0, null, $target);
+        throw new IOException(sprintf('Failed to create "%s" link from "%s" to "%s".', $linkType, $origin, $target), 0, null, $target);
     }
 
     /**
@@ -414,12 +408,12 @@ class Filesystem
     public function readlink($path, $canonicalize = false)
     {
         if (!$canonicalize && !is_link($path)) {
-            return;
+            return null;
         }
 
         if ($canonicalize) {
             if (!$this->exists($path)) {
-                return;
+                return null;
             }
 
             if ('\\' === \DIRECTORY_SEPARATOR) {
@@ -460,28 +454,19 @@ class Filesystem
             $startPath = str_replace('\\', '/', $startPath);
         }
 
-        $stripDriveLetter = function ($path) {
-            if (\strlen($path) > 2 && ':' === $path[1] && '/' === $path[2] && ctype_alpha($path[0])) {
-                return substr($path, 2);
-            }
-
-            return $path;
+        $splitDriveLetter = function ($path) {
+            return (\strlen($path) > 2 && ':' === $path[1] && '/' === $path[2] && ctype_alpha($path[0]))
+                ? [substr($path, 2), strtoupper($path[0])]
+                : [$path, null];
         };
 
-        $endPath = $stripDriveLetter($endPath);
-        $startPath = $stripDriveLetter($startPath);
-
-        // Split the paths into arrays
-        $startPathArr = explode('/', trim($startPath, '/'));
-        $endPathArr = explode('/', trim($endPath, '/'));
-
-        $normalizePathArray = function ($pathSegments) {
+        $splitPath = function ($path) {
             $result = [];
 
-            foreach ($pathSegments as $segment) {
+            foreach (explode('/', trim($path, '/')) as $segment) {
                 if ('..' === $segment) {
                     array_pop($result);
-                } elseif ('.' !== $segment) {
+                } elseif ('.' !== $segment && '' !== $segment) {
                     $result[] = $segment;
                 }
             }
@@ -489,8 +474,16 @@ class Filesystem
             return $result;
         };
 
-        $startPathArr = $normalizePathArray($startPathArr);
-        $endPathArr = $normalizePathArray($endPathArr);
+        list($endPath, $endDriveLetter) = $splitDriveLetter($endPath);
+        list($startPath, $startDriveLetter) = $splitDriveLetter($startPath);
+
+        $startPathArr = $splitPath($startPath);
+        $endPathArr = $splitPath($endPath);
+
+        if ($endDriveLetter && $startDriveLetter && $endDriveLetter != $startDriveLetter) {
+            // End path is on another drive, so no relative path exists
+            return $endDriveLetter.':/'.($endPathArr ? implode('/', $endPathArr).'/' : '');
+        }
 
         // Find for which directory the common path stops
         $index = 0;
@@ -569,14 +562,15 @@ class Filesystem
         }
 
         $this->mkdir($targetDir);
-        $targetDirInfo = new \SplFileInfo($targetDir);
+        $filesCreatedWhileMirroring = [];
 
         foreach ($iterator as $file) {
-            if ($file->getPathname() === $targetDir || $file->getRealPath() === $targetDir || 0 === strpos($file->getRealPath(), $targetDirInfo->getRealPath())) {
+            if ($file->getPathname() === $targetDir || $file->getRealPath() === $targetDir || isset($filesCreatedWhileMirroring[$file->getRealPath()])) {
                 continue;
             }
 
             $target = $targetDir.substr($file->getPathname(), $originDirLen);
+            $filesCreatedWhileMirroring[$target] = true;
 
             if (!$copyOnWindows && is_link($file)) {
                 $this->symlink($file->getLinkTarget(), $target);
@@ -599,6 +593,10 @@ class Filesystem
      */
     public function isAbsolutePath($file)
     {
+        if (null === $file) {
+            @trigger_error(sprintf('Calling "%s()" with a null in the $file argument is deprecated since Symfony 4.4.', __METHOD__), E_USER_DEPRECATED);
+        }
+
         return strspn($file, '/\\', 0, 1)
             || (\strlen($file) > 3 && ctype_alpha($file[0])
                 && ':' === $file[1]
@@ -741,18 +739,21 @@ class Filesystem
         return 2 === \count($components) ? [$components[0], $components[1]] : [null, $components[0]];
     }
 
-    private static function box($func)
+    /**
+     * @return mixed
+     */
+    private static function box(callable $func)
     {
         self::$lastError = null;
-        \set_error_handler(__CLASS__.'::handleError');
+        set_error_handler(__CLASS__.'::handleError');
         try {
             $result = $func(...\array_slice(\func_get_args(), 1));
-            \restore_error_handler();
+            restore_error_handler();
 
             return $result;
         } catch (\Throwable $e) {
         }
-        \restore_error_handler();
+        restore_error_handler();
 
         throw $e;
     }

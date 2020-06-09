@@ -8,10 +8,10 @@ class Interceptor extends \Magento\Customer\Model\ResourceModel\Customer impleme
 {
     use \Magento\Framework\Interception\Interceptor;
 
-    public function __construct(\Magento\Eav\Model\Entity\Context $context, \Magento\Framework\Model\ResourceModel\Db\VersionControl\Snapshot $entitySnapshot, \Magento\Framework\Model\ResourceModel\Db\VersionControl\RelationComposite $entityRelationComposite, \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig, \Magento\Framework\Validator\Factory $validatorFactory, \Magento\Framework\Stdlib\DateTime $dateTime, \Magento\Store\Model\StoreManagerInterface $storeManager, $data = [])
+    public function __construct(\Magento\Eav\Model\Entity\Context $context, \Magento\Framework\Model\ResourceModel\Db\VersionControl\Snapshot $entitySnapshot, \Magento\Framework\Model\ResourceModel\Db\VersionControl\RelationComposite $entityRelationComposite, \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig, \Magento\Framework\Validator\Factory $validatorFactory, \Magento\Framework\Stdlib\DateTime $dateTime, \Magento\Store\Model\StoreManagerInterface $storeManager, $data = [], ?\Magento\Customer\Model\AccountConfirmation $accountConfirmation = null)
     {
         $this->___init();
-        parent::__construct($context, $entitySnapshot, $entityRelationComposite, $scopeConfig, $validatorFactory, $dateTime, $storeManager, $data);
+        parent::__construct($context, $entitySnapshot, $entityRelationComposite, $scopeConfig, $validatorFactory, $dateTime, $storeManager, $data, $accountConfirmation);
     }
 
     /**

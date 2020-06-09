@@ -23,7 +23,7 @@ use Psr\Log\LoggerInterface;
 
 class Client implements ClientInterface, LoggerAwareInterface
 {
-    const SDK_VERSION = '3.4.1';
+    const SDK_VERSION = '3.6.0';
     const MWS_VERSION = '2013-01-01';
     const MAX_ERROR_RETRY = 3;
 
@@ -365,7 +365,7 @@ class Client implements ClientInterface, LoggerAwareInterface
                 if (!is_bool($value)) {
                     throw new \Exception($param . ' value ' . $value . ' is of type ' . gettype($value) . ' and should be a boolean value');
                 }
-            } elseif ($param === 'provider_credit_details' || $param === 'provider_credit_reversal_details' || $param === 'order_item_categories') {
+            } elseif ($param === 'provider_credit_details' || $param === 'provider_credit_reversal_details' || $param === 'order_item_categories' || $param === 'notification_configuration_list') {
                 if (!is_array($value)) {
                     throw new \Exception($param . ' value ' . $value . ' is of type ' . gettype($value) . ' and should be an array value');
                 }
@@ -382,6 +382,8 @@ class Client implements ClientInterface, LoggerAwareInterface
                         $parameters = $this->setProviderCreditReversalDetails($parameters, $value);
                     } elseif ($param === 'order_item_categories') {
                         $parameters = $this->setOrderItemCategories($parameters, $value);
+                    } elseif ($param == 'notification_configuration_list') {
+                        $parameters = $this->setNotificationConfigurationList($parameters, $value);
                     }
 
                 } else {
@@ -431,8 +433,9 @@ class Client implements ClientInterface, LoggerAwareInterface
         if (array_key_exists('currency_code', $fieldMappings)) {
             if (!empty($requestParameters['currency_code'])) {
                 $parameters[$fieldMappings['currency_code']] = strtoupper($requestParameters['currency_code']);
-            } else if (!(array_key_exists('Action', $parameters) && ( $parameters['Action'] === 'SetOrderAttributes' || $parameters['Action'] === 'ConfirmOrderReference'))) {
-                // Only supply a default CurrencyCode parameter if not using SetOrderAttributes API
+            } else if (!(array_key_exists('Action', $parameters) &&
+                        ($parameters['Action'] === 'SetOrderAttributes' || $parameters['Action'] === 'ConfirmOrderReference' || $parameters['Action'] === 'SetBillingAgreementDetails'))) {
+                // Only supply a default CurrencyCode parameter if not using SetOrderAttributes, ConfirmOrderReference, or SetBillingAgreementDetails
                 $parameters[$fieldMappings['currency_code']] = strtoupper($this->config['currency_code']);
             }
         }
@@ -452,6 +455,32 @@ class Client implements ClientInterface, LoggerAwareInterface
         foreach ($categories as $value) {
             $categoryIndex = $categoryIndex + 1;
             $parameters[$categoryString . $categoryIndex] = $value;
+        }
+
+        return $parameters;
+    }
+
+
+    /* setMerchantNotificationUrls - helper function used by SetMerchantNotificationConfiguration API to set
+     * one or more Notification Configurations
+    */
+    private function setNotificationConfigurationList($parameters, $configuration)
+    {
+        $configurationIndex = 0;
+        if (!is_array($configuration)) {
+            throw new \Exception('Notification Configuration List value ' . $configuration . ' is of type ' . gettype($configuration) . ' and should be an array value');
+        }
+        foreach ($configuration as $url => $events) {
+            $configurationIndex = $configurationIndex + 1;
+            $parameters['NotificationConfigurationList.NotificationConfiguration.' . $configurationIndex . '.NotificationUrl'] = $url;
+            $eventIndex = 0;
+            if (!is_array($events)) {
+                throw new \Exception('Notification Configuration Events value ' . $events . ' is of type ' . gettype($events) . ' and should be an array value');
+            }
+            foreach ($events as $event) {
+                $eventIndex = $eventIndex + 1;
+                $parameters['NotificationConfigurationList.NotificationConfiguration.' . $configurationIndex . '.EventTypes.EventTypeList.' . $eventIndex] = $event;
+            }
         }
 
         return $parameters;
@@ -739,7 +768,7 @@ class Client implements ClientInterface, LoggerAwareInterface
             'seller_order_id'                   => 'OrderAttributes.SellerOrderAttributes.SellerOrderId',
             'store_name'                        => 'OrderAttributes.SellerOrderAttributes.StoreName',
             'custom_information'                => 'OrderAttributes.SellerOrderAttributes.CustomInformation',
-            'supplementary_data'                => 'OrderAttributes.SellerOrderAttributes.SupplementaryData',            
+            'supplementary_data'                => 'OrderAttributes.SellerOrderAttributes.SupplementaryData',
             'request_payment_authorization'     => 'OrderAttributes.RequestPaymentAuthorization',
             'payment_service_provider_id'       => 'OrderAttributes.PaymentServiceProviderAttributes.PaymentServiceProviderId',
             'payment_service_provider_order_id' => 'OrderAttributes.PaymentServiceProviderAttributes.PaymentServiceProviderOrderId',
@@ -754,10 +783,10 @@ class Client implements ClientInterface, LoggerAwareInterface
 
     /* ConfirmOrderReference API call - Confirms that the order reference is free of constraints and all required information has been set on the order reference.
      * @see https://pay.amazon.com/developer/documentation/apireference/201751980
-
+     *
      * @param requestParameters['merchant_id'] - [String]
      * @param requestParameters['amazon_order_reference_id'] - [String]
-     * @optional requestParameters['success_url'] - [String]'
+     * @optional requestParameters['success_url'] - [String]
      * @optional requestParameters['failure_url'] - [String]
      * @optional requestParameters['authorization_amount'] - [String]
      * @optional requestParameters['currency_code'] - [String]
@@ -1171,6 +1200,9 @@ class Client implements ClientInterface, LoggerAwareInterface
      * @optional requestParameters['seller_billing_agreement_id'] - [String]
      * @optional requestParameters['store_name'] - [String]
      * @optional requestParameters['custom_information'] - [String]
+     * @optional requestParameters['billing_agreement_type'] - [String] either 'CustomerInitiatedTransaction' or 'MerchantInitiatedTransaction'
+     * @optional requestParameters['subscription_amount'] - [String]
+     * @optional requestParameters['currency_code'] - [String]
      * @optional requestParameters['mws_auth_token'] - [String]
      */
     public function setBillingAgreementDetails($requestParameters = array())
@@ -1187,8 +1219,15 @@ class Client implements ClientInterface, LoggerAwareInterface
             'seller_billing_agreement_id' => 'BillingAgreementAttributes.SellerBillingAgreementAttributes.SellerBillingAgreementId',
             'custom_information'          => 'BillingAgreementAttributes.SellerBillingAgreementAttributes.CustomInformation',
             'store_name'                  => 'BillingAgreementAttributes.SellerBillingAgreementAttributes.StoreName',
+            'billing_agreement_type'      => 'BillingAgreementAttributes.BillingAgreementType',
+            'subscription_amount'         => 'BillingAgreementAttributes.SubscriptionAmount.Amount',
+            'currency_code'               => 'BillingAgreementAttributes.SubscriptionAmount.CurrencyCode',
             'mws_auth_token'              => 'MWSAuthToken'
         );
+
+        if (isset($requestParameters['subscription_amount']) && !isset($requestParameters['currency_code'])) {
+            $requestParameters['currency_code'] = strtoupper($this->config['currency_code']);
+        }
 
         $responseObject = $this->setParametersAndPost($parameters, $fieldMappings, $requestParameters);
         return ($responseObject);
@@ -1200,6 +1239,8 @@ class Client implements ClientInterface, LoggerAwareInterface
      *
      * @param requestParameters['merchant_id'] - [String]
      * @param requestParameters['amazon_billing_agreement_id'] - [String]
+     * @optional requestParameters['success_url'] - [String]
+     * @optional requestParameters['failure_url'] - [String]
      * @optional requestParameters['mws_auth_token'] - [String]
      */
     public function confirmBillingAgreement($requestParameters = array())
@@ -1211,6 +1252,8 @@ class Client implements ClientInterface, LoggerAwareInterface
         $fieldMappings = array(
             'merchant_id'                 => 'SellerId',
             'amazon_billing_agreement_id' => 'AmazonBillingAgreementId',
+            'success_url'                 => 'SuccessUrl',
+            'failure_url'                 => 'FailureUrl',
             'mws_auth_token'              => 'MWSAuthToken'
         );
 
@@ -1248,8 +1291,8 @@ class Client implements ClientInterface, LoggerAwareInterface
      *
      * @param requestParameters['merchant_id'] - [String]
      * @param requestParameters['amazon_billing_agreement_id'] - [String]
-     * @param requestParameters['authorization_reference_id'] [String]
-     * @param requestParameters['authorization_amount'] [String]
+     * @param requestParameters['authorization_reference_id'] - [String]
+     * @param requestParameters['authorization_amount'] - [String]
      * @param requestParameters['currency_code'] - [String]
      * @optional requestParameters['seller_authorization_note'] [String]
      * @optional requestParameters['transaction_timeout'] - Defaults to 1440 minutes
@@ -1314,6 +1357,50 @@ class Client implements ClientInterface, LoggerAwareInterface
             'amazon_billing_agreement_id' => 'AmazonBillingAgreementId',
             'closure_reason'              => 'ClosureReason',
             'mws_auth_token'              => 'MWSAuthToken'
+        );
+
+        $responseObject = $this->setParametersAndPost($parameters, $fieldMappings, $requestParameters);
+        return ($responseObject);
+    }
+
+
+    /* GetMerchantNotificationConfiguration API Call - Returns details about the defined IPN endpoints
+     *
+     * @param requestParameters['merchant_id'] - [String]
+     * @optional requestParameters['mws_auth_token'] - [String]
+     */
+    public function getMerchantNotificationConfiguration($requestParameters = array())
+    {
+        $parameters           = array();
+        $parameters['Action'] = 'GetMerchantNotificationConfiguration';
+        $requestParameters    = array_change_key_case($requestParameters, CASE_LOWER);
+
+        $fieldMappings = array(
+            'merchant_id'                 => 'SellerId',
+            'mws_auth_token'              => 'MWSAuthToken'
+        );
+
+        $responseObject = $this->setParametersAndPost($parameters, $fieldMappings, $requestParameters);
+        return ($responseObject);
+    }
+
+
+    /* SetMerchantNotificationConfiguration API Call - Set IPN endpoints
+     *
+     * @param requestParameters['merchant_id'] - [String]
+     * @param requestParameters['notification_configuration_list'] - [Array]
+     * @optional requestParameters['mws_auth_token'] - [String]
+     */
+    public function setMerchantNotificationConfiguration($requestParameters = array())
+    {
+        $parameters           = array();
+        $parameters['Action'] = 'SetMerchantNotificationConfiguration';
+        $requestParameters    = array_change_key_case($requestParameters, CASE_LOWER);
+
+        $fieldMappings = array(
+            'merchant_id'                     => 'SellerId',
+            'notification_configuration_list' => array(),
+            'mws_auth_token'                  => 'MWSAuthToken'
         );
 
         $responseObject = $this->setParametersAndPost($parameters, $fieldMappings, $requestParameters);

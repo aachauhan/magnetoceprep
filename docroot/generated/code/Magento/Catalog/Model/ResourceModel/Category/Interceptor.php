@@ -8,10 +8,10 @@ class Interceptor extends \Magento\Catalog\Model\ResourceModel\Category implemen
 {
     use \Magento\Framework\Interception\Interceptor;
 
-    public function __construct(\Magento\Eav\Model\Entity\Context $context, \Magento\Store\Model\StoreManagerInterface $storeManager, \Magento\Catalog\Model\Factory $modelFactory, \Magento\Framework\Event\ManagerInterface $eventManager, \Magento\Catalog\Model\ResourceModel\Category\TreeFactory $categoryTreeFactory, \Magento\Catalog\Model\ResourceModel\Category\CollectionFactory $categoryCollectionFactory, \Magento\Catalog\Model\Indexer\Category\Product\Processor $indexerProcessor, $data = [], ?\Magento\Framework\Serialize\Serializer\Json $serializer = null)
+    public function __construct(\Magento\Eav\Model\Entity\Context $context, \Magento\Store\Model\StoreManagerInterface $storeManager, \Magento\Catalog\Model\Factory $modelFactory, \Magento\Framework\Event\ManagerInterface $eventManager, \Magento\Catalog\Model\ResourceModel\Category\TreeFactory $categoryTreeFactory, \Magento\Catalog\Model\ResourceModel\Category\CollectionFactory $categoryCollectionFactory, \Magento\Catalog\Model\Indexer\Category\Product\Processor $indexerProcessor, $data = [], ?\Magento\Framework\Serialize\Serializer\Json $serializer = null, ?\Magento\Framework\EntityManager\MetadataPool $metadataPool = null)
     {
         $this->___init();
-        parent::__construct($context, $storeManager, $modelFactory, $eventManager, $categoryTreeFactory, $categoryCollectionFactory, $indexerProcessor, $data, $serializer);
+        parent::__construct($context, $storeManager, $modelFactory, $eventManager, $categoryTreeFactory, $categoryCollectionFactory, $indexerProcessor, $data, $serializer, $metadataPool);
     }
 
     /**
@@ -362,6 +362,19 @@ class Interceptor extends \Magento\Catalog\Model\ResourceModel\Category implemen
             return parent::save($object);
         } else {
             return $this->___callPlugins('save', func_get_args(), $pluginInfo);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getCategoryWithChildren(int $categoryId) : array
+    {
+        $pluginInfo = $this->pluginList->getNext($this->subjectType, 'getCategoryWithChildren');
+        if (!$pluginInfo) {
+            return parent::getCategoryWithChildren($categoryId);
+        } else {
+            return $this->___callPlugins('getCategoryWithChildren', func_get_args(), $pluginInfo);
         }
     }
 

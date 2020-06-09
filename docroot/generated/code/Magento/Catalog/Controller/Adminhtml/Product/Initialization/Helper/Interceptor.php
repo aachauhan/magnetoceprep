@@ -8,10 +8,10 @@ class Interceptor extends \Magento\Catalog\Controller\Adminhtml\Product\Initiali
 {
     use \Magento\Framework\Interception\Interceptor;
 
-    public function __construct(\Magento\Framework\App\RequestInterface $request, \Magento\Store\Model\StoreManagerInterface $storeManager, \Magento\Catalog\Controller\Adminhtml\Product\Initialization\StockDataFilter $stockFilter, \Magento\Catalog\Model\Product\Initialization\Helper\ProductLinks $productLinks, \Magento\Backend\Helper\Js $jsHelper, \Magento\Framework\Stdlib\DateTime\Filter\Date $dateFilter, ?\Magento\Catalog\Api\Data\ProductCustomOptionInterfaceFactory $customOptionFactory = null, ?\Magento\Catalog\Api\Data\ProductLinkInterfaceFactory $productLinkFactory = null, ?\Magento\Catalog\Api\ProductRepositoryInterface $productRepository = null, ?\Magento\Catalog\Model\Product\LinkTypeProvider $linkTypeProvider = null, ?\Magento\Catalog\Controller\Adminhtml\Product\Initialization\Helper\AttributeFilter $attributeFilter = null)
+    public function __construct(\Magento\Framework\App\RequestInterface $request, \Magento\Store\Model\StoreManagerInterface $storeManager, \Magento\Catalog\Controller\Adminhtml\Product\Initialization\StockDataFilter $stockFilter, \Magento\Catalog\Model\Product\Initialization\Helper\ProductLinks $productLinks, \Magento\Backend\Helper\Js $jsHelper, \Magento\Framework\Stdlib\DateTime\Filter\Date $dateFilter, ?\Magento\Catalog\Api\Data\ProductCustomOptionInterfaceFactory $customOptionFactory = null, ?\Magento\Catalog\Api\Data\ProductLinkInterfaceFactory $productLinkFactory = null, ?\Magento\Catalog\Api\ProductRepositoryInterface $productRepository = null, ?\Magento\Catalog\Model\Product\LinkTypeProvider $linkTypeProvider = null, ?\Magento\Catalog\Controller\Adminhtml\Product\Initialization\Helper\AttributeFilter $attributeFilter = null, ?\Magento\Framework\Locale\FormatInterface $localeFormat = null, ?\Magento\Catalog\Model\Product\Authorization $productAuthorization = null, ?\Magento\Catalog\Model\Product\Filter\DateTime $dateTimeFilter = null)
     {
         $this->___init();
-        parent::__construct($request, $storeManager, $stockFilter, $productLinks, $jsHelper, $dateFilter, $customOptionFactory, $productLinkFactory, $productRepository, $linkTypeProvider, $attributeFilter);
+        parent::__construct($request, $storeManager, $stockFilter, $productLinks, $jsHelper, $dateFilter, $customOptionFactory, $productLinkFactory, $productRepository, $linkTypeProvider, $attributeFilter, $localeFormat, $productAuthorization, $dateTimeFilter);
     }
 
     /**

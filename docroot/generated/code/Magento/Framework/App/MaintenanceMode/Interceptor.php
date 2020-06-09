@@ -8,10 +8,10 @@ class Interceptor extends \Magento\Framework\App\MaintenanceMode implements \Mag
 {
     use \Magento\Framework\Interception\Interceptor;
 
-    public function __construct(\Magento\Framework\Filesystem $filesystem)
+    public function __construct(\Magento\Framework\Filesystem $filesystem, ?\Magento\Framework\Event\Manager $eventManager = null)
     {
         $this->___init();
-        parent::__construct($filesystem);
+        parent::__construct($filesystem, $eventManager);
     }
 
     /**

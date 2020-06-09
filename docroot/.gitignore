@@ -44,10 +44,12 @@ atlassian*
 #/pub/media/captcha/*
 #/pub/static/*
 #!/pub/static/.htaccess
+generated/*
+dev/tests/*
 
-#/var/*
+/var/*
 #!/var/.htaccess
-#/vendor/*
+/vendor/*
 #!/vendor/.htaccess
 
 /pub/media/catalog/product/cache/

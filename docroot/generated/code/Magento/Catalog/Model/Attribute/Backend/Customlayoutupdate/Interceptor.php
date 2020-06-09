@@ -30,6 +30,19 @@ class Interceptor extends \Magento\Catalog\Model\Attribute\Backend\Customlayoutu
     /**
      * {@inheritdoc}
      */
+    public function beforeSave($object)
+    {
+        $pluginInfo = $this->pluginList->getNext($this->subjectType, 'beforeSave');
+        if (!$pluginInfo) {
+            return parent::beforeSave($object);
+        } else {
+            return $this->___callPlugins('beforeSave', func_get_args(), $pluginInfo);
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function setAttribute($attribute)
     {
         $pluginInfo = $this->pluginList->getNext($this->subjectType, 'setAttribute');
@@ -180,19 +193,6 @@ class Interceptor extends \Magento\Catalog\Model\Attribute\Backend\Customlayoutu
             return parent::afterLoad($object);
         } else {
             return $this->___callPlugins('afterLoad', func_get_args(), $pluginInfo);
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function beforeSave($object)
-    {
-        $pluginInfo = $this->pluginList->getNext($this->subjectType, 'beforeSave');
-        if (!$pluginInfo) {
-            return parent::beforeSave($object);
-        } else {
-            return $this->___callPlugins('beforeSave', func_get_args(), $pluginInfo);
         }
     }
 
